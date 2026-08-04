@@ -10,6 +10,7 @@ import { hashPassword, hashToken, newResetToken } from "@/lib/password";
 import { passwordProblem } from "@/lib/password-rules";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { hasResend, sendEmail } from "@/lib/resend";
+import { SITE_URL } from "@/lib/site-url";
 
 export type FormState = { error?: string; done?: boolean };
 
@@ -82,7 +83,7 @@ export async function requestResetAction(
         },
       });
 
-      const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      const site = SITE_URL;
       const url = `${site}/admin/reset?token=${token}`;
 
       if (hasResend) {

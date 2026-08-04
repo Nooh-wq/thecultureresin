@@ -1,6 +1,5 @@
 import type { Piece } from "@/lib/pieces";
-
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+import { SITE_URL as SITE } from "@/lib/site-url";
 
 function Ld({ data }: { data: object }) {
   return (

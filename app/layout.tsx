@@ -1,9 +1,13 @@
 import type { Metadata } from "next";
 import { alegreya, karla } from "@/lib/fonts";
+import { SITE_URL } from "@/lib/site-url";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"),
+  // SITE_URL is already validated, so this new URL() cannot throw. It used to
+  // read the raw environment variable, and a value pasted with its quotes
+  // still attached failed the production build here.
+  metadataBase: new URL(SITE_URL),
   title: "The Culture Resin | Handmade Resin Art, Islamabad",
   description:
     "Handmade resin art from Islamabad. Wall clocks, tables, keepsakes and jewellery, all made to order.",

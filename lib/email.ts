@@ -1,6 +1,7 @@
 import { CustomerConfirmation, type SummaryRow } from "@/emails/CustomerConfirmation";
 import { OwnerNotification } from "@/emails/OwnerNotification";
 import { OWNER_EMAIL, sendEmail } from "@/lib/resend";
+import { SITE_URL } from "@/lib/site-url";
 
 export { hasResend } from "@/lib/resend";
 
@@ -45,7 +46,7 @@ export type OrderEmailResult = {
  * for an order that was actually accepted, which would produce a duplicate.
  */
 export async function sendOrderEmails(args: SendArgs): Promise<OrderEmailResult> {
-  const site = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+  const site = SITE_URL;
 
   const owner = await sendEmail({
     label: `owner notification ${args.reference}`,

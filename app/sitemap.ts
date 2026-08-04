@@ -1,7 +1,6 @@
 import type { MetadataRoute } from "next";
 import { getPieces } from "@/lib/gallery";
-
-const SITE = process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+import { SITE_URL as SITE } from "@/lib/site-url";
 
 /**
  * Rebuilt hourly. Without this the sitemap is prerendered once at build time,
