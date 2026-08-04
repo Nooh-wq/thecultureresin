@@ -53,8 +53,20 @@ export function GalleryGrid({
 
   return (
     <>
+      {/*
+        The two filter rows wrap rather than scroll sideways.
+
+        They were overflow-x-auto with a negative margin so the row could bleed
+        to the screen edge, which on a phone hid Keepsakes, Wall art and half
+        the vibes behind a horizontal scroll nobody knew was there. A filter you
+        cannot see is a filter that does not exist, and there is no affordance
+        pointing at it: the chips are plain text with no scrollbar on iOS.
+
+        Wrapping costs a couple of lines of height and makes every option
+        visible at once. Desktop is unaffected, both rows already fit there.
+      */}
       <div className="flex flex-col gap-4 border-b border-line pb-8 md:flex-row md:items-center md:gap-8">
-        <div className="-mx-6 flex gap-6 overflow-x-auto px-6 md:mx-0 md:px-0">
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
           <button type="button" onClick={() => setCategory(null)} className={chip(!category)}>
             All
           </button>
@@ -72,7 +84,7 @@ export function GalleryGrid({
 
         <span className="hidden h-4 w-px shrink-0 bg-line md:block" aria-hidden />
 
-        <div className="-mx-6 flex gap-6 overflow-x-auto px-6 md:mx-0 md:px-0">
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
           {GALLERY_VIBES.map((v) => (
             <button
               key={v}
