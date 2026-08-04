@@ -1,0 +1,16 @@
+{
+  // For the standalone scripts only, never for the app build.
+  //
+  // The root tsconfig sets "jsx": "preserve", which is correct: Next.js does
+  // the JSX transform itself. But tsx has no Next.js in front of it, so it
+  // sees "preserve", falls back to the classic runtime and emits
+  // React.createElement into files that never import React. Rendering an
+  // email template outside Next then fails with "React is not defined".
+  //
+  // react-jsx is the automatic runtime, which is what Next uses anyway, so the
+  // scripts and the app now agree on how a template compiles.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "jsx": "react-jsx"
+  }
+}

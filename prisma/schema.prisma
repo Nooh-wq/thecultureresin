@@ -1,0 +1,251 @@
+// The Culture Resin.
+//
+// She takes ORDERS. That word, and only that word, is used for every model,
+// field, enum, route and variable here. The alternative term this brief bans
+// appears nowhere in the project, deliberately. Keep it that way.
+//
+// No prices are ever exposed publicly. Order.quotedAmount and
+// Order.internalNotes must never appear in a public query. Use an explicit
+// `select` at every public call site rather than relying on discipline.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Supabase, through two different connection strings.
+//
+// DATABASE_URL is the transaction pooler on port 6543. Serverless functions
+// open a connection per invocation and Postgres would run out long before
+// traffic did, so the app always goes through PgBouncer.
+//
+// DIRECT_URL is the session pooler on port 5432, and migrations use it.
+// Migrations take advisory locks and run DDL in long transactions, neither of
+// which survives transaction pooling, so pointing prisma migrate at 6543 fails
+// in ways that look like a broken schema rather than a wrong port.
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ---------------------------------------------------------------------------
+// Auth. Magic link only, and only for addresses in ADMIN_EMAILS. There are no
+// passwords and no public sign-up.
+// ---------------------------------------------------------------------------
+
+model User {
+  id            String    @id @default(cuid())
+  name          String?
+  email         String    @unique
+  emailVerified DateTime?
+  image         String?
+
+  /// scrypt. Format: scrypt$N$r$p$salt$key, all base64. Never the password.
+  passwordHash String?
+
+  /// Set on every failed sign-in, cleared on success. Cheap brute-force brake
+  /// on top of the IP rate limit, which an attacker can sidestep by rotating
+  /// addresses.
+  failedAttempts Int       @default(0)
+  lockedUntil    DateTime?
+
+  accounts      Account[]
+  sessions      Session[]
+  resetTokens   PasswordResetToken[]
+}
+
+/// Password reset.
+///
+/// Only the SHA-256 hash of the token is stored, so read access to this table
+/// does not let anyone reset a password. Single use, short lived.
+model PasswordResetToken {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Account {
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([provider, providerAccountId])
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String
+  expires    DateTime
+
+  @@id([identifier, token])
+}
+
+// ---------------------------------------------------------------------------
+// Portfolio
+// ---------------------------------------------------------------------------
+
+enum Category {
+  CLOCKS
+  TABLES
+  TRAYS
+  WALL_ART
+  JEWELLERY
+  KEEPSAKES
+}
+
+enum Vibe {
+  OCEANIC
+  BOTANICAL
+  DRAMATIC
+  SOFT
+  MINIMAL
+  PLAYFUL
+  TRADITIONAL
+}
+
+model Piece {
+  id       String   @id @default(cuid())
+  slug     String   @unique
+  title    String
+  category Category
+  vibes    Vibe[]
+
+  /// Her words about the piece. Max 140 characters, enforced in the admin.
+  storyNote  String?
+  dimensions String?
+  materials  String?
+  leadTime   String?
+
+  /// Non-null puts the piece in Home's Selected work section, lowest first.
+  featuredOrder Int?
+
+  /// Caption shown only in Home's Selected work. Separate from storyNote:
+  /// the Home captions carry dimensions in prose, the popup has its own field.
+  featuredCaption String?
+
+  published Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  images PieceImage[]
+  orders Order[]      @relation("OrderReferencePiece")
+
+  @@index([category])
+  @@index([published, sortOrder])
+}
+
+model PieceImage {
+  id      String @id @default(cuid())
+  pieceId String
+  piece   Piece  @relation(fields: [pieceId], references: [id], onDelete: Cascade)
+
+  url    String
+  width  Int
+  height Int
+
+  /// Required, always. A real description like "black and gold resin wall clock
+  /// with gold Roman numerals", never "resin art 4". It is how the site gets
+  /// found, and it is the only thing a screen reader receives.
+  alt String
+
+  /// Base64 LQIP generated at upload time. This IS the uncured state of the
+  /// cure transition, so the load and the animation are one gesture.
+  blurDataUrl String
+
+  /// Focal point as 0..1 fractions, for fixed-ratio grid crops.
+  focalX Float @default(0.5)
+  focalY Float @default(0.5)
+
+  sortOrder Int @default(0)
+
+  @@index([pieceId, sortOrder])
+}
+
+// ---------------------------------------------------------------------------
+// Orders
+// ---------------------------------------------------------------------------
+
+/// PROPOSED. tcr-copy.md and CLAUDE.md both name this enum and neither lists
+/// its values. Confirm the pipeline she actually wants before building the
+/// admin inbox in phase 7.
+enum OrderStatus {
+  NEW
+  QUOTED
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  DECLINED
+}
+
+enum OrderReferenceType {
+  GALLERY_PIECE
+  UPLOADED_IMAGE
+  NONE
+}
+
+model Order {
+  id String @id @default(cuid())
+
+  /// Customer-facing reference, rendered as TCR-0041. Sequential, generated
+  /// server-side and returned in the submit response, because the success
+  /// state shows it before any email has been sent.
+  reference Int @unique @default(autoincrement())
+
+  status OrderStatus @default(NEW)
+
+  // What they want
+  productType   String
+  productDetail String?
+
+  referenceType OrderReferenceType @default(NONE)
+  referencePieceId String?
+  referencePiece   Piece? @relation("OrderReferencePiece", fields: [referencePieceId], references: [id], onDelete: SetNull)
+  referenceImageUrl String?
+
+  occasion   String?
+  vibes      Vibe[]
+  lettering  String?
+  size       String?
+  neededBy   DateTime?
+  budgetBand String?
+
+  // Who they are
+  country  String
+  city     String?
+  name     String
+  whatsapp String
+  email    String?
+  notes    String?
+
+  /// Never expose either of these in a public query.
+  internalNotes String?
+  quotedAmount  Decimal? @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, createdAt])
+}

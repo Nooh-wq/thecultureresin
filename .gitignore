@@ -1,0 +1,26 @@
+node_modules/
+.next/
+out/
+build/
+next-env.d.ts
+*.tsbuildinfo
+
+.env
+.env.local
+.env*.local
+
+.DS_Store
+*.pem
+npm-debug.log*
+
+# The original asset folders live at the repo root on the owner's machine.
+# Everything the build reads has been copied into /public, so these are source
+# material rather than build input and the repo does not need them.
+#
+# This was a comment with no patterns under it until now, which meant 4.3MB of
+# originals would have been committed on the first push. They are excluded
+# deliberately, so they are NOT backed up by this repository. Keep your own
+# copy of them.
+/Hero image/
+/Images/
+/Logo/
