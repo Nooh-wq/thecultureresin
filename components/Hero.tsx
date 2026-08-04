@@ -68,7 +68,21 @@ export function Hero() {
 
   return (
     <section className="relative flex flex-col lg:block lg:h-screen lg:min-h-[38rem]">
-      <div className="relative lg:absolute lg:inset-0">
+      {/*
+        overflow-hidden is load-bearing, not tidiness.
+
+        The uncured layer below is scaled to 1.08 and the image itself starts
+        at 1.02, so both are wider than the viewport by design: that is what
+        stops the blur's soft edge showing as a seam. Without clipping, those
+        few percent became real document width and the whole page could be
+        dragged sideways. Measured at 1425px wide it overflowed by exactly
+        57px, which is the 8% overhang split across both sides.
+
+        Worse, opacity: 0 does not remove an element from layout, so the
+        scrollbar stayed after the image had finished loading and the layer
+        was invisible. Nothing on screen explained it.
+      */}
+      <div className="relative overflow-hidden lg:absolute lg:inset-0">
         {/* The uncured state. Static blur, so only opacity animates. */}
         <div
           aria-hidden
