@@ -25,13 +25,23 @@ const VIBES = [
   ["TRADITIONAL", "Traditional"],
 ] as const;
 
+/**
+ * No alt here. One description covers every photograph of a piece, and is
+ * applied to all of them on submit.
+ *
+ * Asking per image meant five photographs of one clock demanded five separate
+ * descriptions, which is the kind of friction that ends with "resin art 4"
+ * typed five times. A screen reader hearing the same sentence for each angle
+ * of the same object is a much smaller problem than no real description at
+ * all. Individual wording is still available afterwards, per image, on the
+ * piece's own page.
+ */
 type Draft = {
   key: string;
   url: string;
   width: number;
   height: number;
   blurDataUrl: string;
-  alt: string;
   focalX: number;
   focalY: number;
 };
@@ -59,6 +69,8 @@ export function AddPieceModal() {
   const [slug, setSlug] = useState("");
   const [slugTouched, setSlugTouched] = useState(false);
   const [images, setImages] = useState<Draft[]>([]);
+  /** One sentence, applied to every photograph of this piece. */
+  const [description, setDescription] = useState("");
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -70,6 +82,9 @@ export function AddPieceModal() {
     setSlug("");
     setSlugTouched(false);
     setImages([]);
+    // Otherwise the next piece opens carrying the last one's description, and
+    // a stale description is worse than an empty one: it looks deliberate.
+    setDescription("");
     router.refresh();
   }, [state.ok, router]);
 
@@ -109,7 +124,6 @@ export function AddPieceModal() {
             width: up.width,
             height: up.height,
             blurDataUrl,
-            alt: "",
             focalX: 0.5,
             focalY: 0.5,
           },
@@ -160,7 +174,16 @@ export function AddPieceModal() {
             </div>
 
             <form action={action} className="flex flex-col gap-8">
-              <input type="hidden" name="images" value={JSON.stringify(images)} />
+              {/* The one description is stamped onto every image here, so the
+                  server still receives an alt per image and its validation is
+                  unchanged. */}
+              <input
+                type="hidden"
+                name="images"
+                value={JSON.stringify(
+                  images.map((i) => ({ ...i, alt: description.trim() })),
+                )}
+              />
 
               <div className="grid gap-5 sm:grid-cols-2">
                 <label className="flex flex-col gap-2">
@@ -270,18 +293,32 @@ export function AddPieceModal() {
                   )}
                 </div>
 
+                {/* One description for the whole piece, not one per file.
+                    Sits above the thumbnails because it describes all of them. */}
+                {images.length > 0 && (
+                  <label className="flex flex-col gap-2">
+                    <span className="eyebrow text-ink-muted">
+                      Describe the photographs (required)
+                    </span>
+                    <input
+                      value={description}
+                      onChange={(e) => setDescription(e.target.value)}
+                      required
+                      minLength={10}
+                      placeholder="black and gold resin wall clock with gold Roman numerals"
+                      className={field}
+                    />
+                    <span className="text-caption text-ink-muted">
+                      This covers every photograph here. It is what a screen reader reads out
+                      and how the piece gets found in search, so describe the object rather
+                      than naming it. You can reword an individual photograph later by opening
+                      the piece.
+                    </span>
+                  </label>
+                )}
+
                 {images.map((img) => (
                   <div key={img.key} className="flex flex-col gap-4 border border-line p-5">
-                    <label className="flex flex-col gap-2">
-                      <span className="eyebrow text-ink-muted">Describe it (required)</span>
-                      <input
-                        value={img.alt}
-                        onChange={(e) => patch(img.key, { alt: e.target.value })}
-                        placeholder="black and gold resin wall clock with gold Roman numerals"
-                        className={field}
-                      />
-                    </label>
-
                     <FocalPicker
                       src={img.url}
                       alt=""

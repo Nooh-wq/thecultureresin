@@ -14,6 +14,7 @@
     "set-password": "tsx prisma/set-password.ts",
     "check:db": "tsx scripts/check-db.ts",
     "check:services": "tsx scripts/check-services.ts",
+    "cloudinary:orphans": "tsx scripts/cloudinary-orphans.ts",
     "check:email": "tsx --tsconfig tsconfig.scripts.json scripts/check-email.ts"
   },
   "dependencies": {
