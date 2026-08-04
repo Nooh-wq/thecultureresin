@@ -80,7 +80,9 @@ export function ImageManager({ pieceId, images }: { pieceId: string; images: Img
           <input type="hidden" name="sortOrder" value={images.length} />
 
           <label className="flex flex-col gap-2">
-            <span className="eyebrow text-ink-muted">Describe it (required)</span>
+            <span className="eyebrow text-ink-muted">
+              Photograph description · not shown on the page
+            </span>
             <input
               name="alt"
               required

@@ -10,7 +10,21 @@ import type { Piece } from "@/lib/pieces";
  * all null across every piece today.
  */
 export function PieceDetail({ piece }: { piece: Piece }) {
-  const facts = [piece.dimensions, piece.materials, piece.leadTime].filter(Boolean) as string[];
+  /**
+   * Labelled, because these were three bare values separated by hairlines and
+   * a piece reading "1 | 1 | 1" tells nobody which number is the size and
+   * which is the wait. They are only obvious when you already know the order
+   * they were written in.
+   *
+   * A definition list rather than a row of spans: these are pairs, and saying
+   * so means a screen reader announces "Size, 40cm across" instead of running
+   * three unrelated values together.
+   */
+  const facts = [
+    ["Size", piece.dimensions],
+    ["Made from", piece.materials],
+    ["Takes about", piece.leadTime],
+  ].filter(([, value]) => Boolean(value)) as [string, string][];
 
   return (
     <div className="flex flex-col gap-6">
@@ -19,14 +33,14 @@ export function PieceDetail({ piece }: { piece: Piece }) {
       <h1 className="font-display text-display-md text-ink">{piece.title}</h1>
 
       {facts.length > 0 && (
-        <div className="flex flex-wrap items-center gap-3 text-caption text-ink-muted">
-          {facts.map((f, i) => (
-            <span key={f} className="flex items-center gap-3">
-              {i > 0 && <span className="h-3 w-px bg-line" aria-hidden />}
-              {f}
-            </span>
+        <dl className="flex flex-col gap-2">
+          {facts.map(([label, value]) => (
+            <div key={label} className="flex items-baseline gap-3">
+              <dt className="eyebrow shrink-0 text-ink-muted">{label}</dt>
+              <dd className="text-caption text-ink">{value}</dd>
+            </div>
           ))}
-        </div>
+        </dl>
       )}
 
       {piece.storyNote && <p className="text-body text-ink-muted">{piece.storyNote}</p>}

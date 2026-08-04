@@ -43,7 +43,7 @@ export default async function EditPiece({ params }: { params: Promise<{ id: stri
         </label>
 
         <label className="flex flex-col gap-2">
-          <span className="eyebrow text-ink-muted">Story note</span>
+          <span className="eyebrow text-ink-muted">Story note · shown on the piece</span>
           <input
             name="storyNote"
             maxLength={140}

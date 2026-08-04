@@ -249,12 +249,19 @@ export function AddPieceModal() {
                 </div>
               </fieldset>
 
+              {/* Named so it cannot be confused with the photograph
+                  description below. Both used to read as "the description",
+                  and the wrong one got filled in, which is a labelling
+                  failure rather than a user one. */}
               <label className="flex flex-col gap-2">
-                <span className="eyebrow text-ink-muted">Story note</span>
+                <span className="eyebrow text-ink-muted">
+                  Story note · shown on the piece
+                </span>
                 <input name="storyNote" maxLength={140} className={field} />
                 <span className="text-caption text-ink-muted">
-                  Your words, 140 characters at most. Leave it empty rather than filling it in for
-                  the sake of it.
+                  Your words, 140 characters at most. This is the sentence visitors read when
+                  they open the piece. Leave it empty rather than filling it in for the sake of
+                  it.
                 </span>
               </label>
 
@@ -298,7 +305,7 @@ export function AddPieceModal() {
                 {images.length > 0 && (
                   <label className="flex flex-col gap-2">
                     <span className="eyebrow text-ink-muted">
-                      Describe the photographs (required)
+                      Photograph description · not shown on the page
                     </span>
                     <input
                       value={description}
@@ -309,10 +316,10 @@ export function AddPieceModal() {
                       className={field}
                     />
                     <span className="text-caption text-ink-muted">
-                      This covers every photograph here. It is what a screen reader reads out
-                      and how the piece gets found in search, so describe the object rather
-                      than naming it. You can reword an individual photograph later by opening
-                      the piece.
+                      Not the story note. Nobody reads this on the page: it is what a screen
+                      reader announces and how the piece gets found in search, so describe what
+                      the object looks like. One covers every photograph here, and an
+                      individual one can be reworded later by opening the piece.
                     </span>
                   </label>
                 )}
