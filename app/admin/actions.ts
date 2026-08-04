@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { getPrisma, hasDatabase } from "@/lib/db";
 
@@ -173,11 +174,33 @@ export async function createPieceWithImages(
   return { ok: true };
 }
 
+/**
+ * Deleting used to leave her staring at "this page doesn't exist".
+ *
+ * The delete happens on /admin/gallery/[id], so once the row is gone that
+ * route re-renders, finds nothing and calls notFound(). Nothing was broken,
+ * but the only feedback that it had worked was an error page, which reads
+ * exactly like a failure.
+ *
+ * So it redirects to the list and names what went, rather than leaving her to
+ * work out whether the delete succeeded. redirect() throws NEXT_REDIRECT, so
+ * it has to come after the revalidations, not inside a try.
+ */
 export async function deletePiece(id: string) {
   const prisma = await requireOwner();
-  await prisma.piece.delete({ where: { id } });
+  const deleted = await prisma.piece.delete({
+    where: { id },
+    select: { title: true },
+  });
+
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");
+  // The home page too: a deleted piece may have been in Selected work, and
+  // that section would otherwise keep showing it until something else
+  // revalidated.
+  revalidatePath("/");
+
+  redirect(`/admin/gallery?deleted=${encodeURIComponent(deleted.title)}`);
 }
 
 export async function addPieceImage(formData: FormData) {

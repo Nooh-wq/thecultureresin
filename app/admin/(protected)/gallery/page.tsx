@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { AddPieceModal } from "@/components/admin/AddPieceModal";
+import { Toast } from "@/components/admin/Toast";
 import { getAdminPrisma } from "@/lib/admin-guard";
 import { plural, prettyEnum } from "@/lib/format";
 
-export default async function GalleryAdmin() {
+export default async function GalleryAdmin({
+  searchParams,
+}: {
+  searchParams: Promise<{ deleted?: string }>;
+}) {
+  const { deleted } = await searchParams;
   const prisma = await getAdminPrisma();
   if (!prisma) return null;
 
@@ -61,6 +67,8 @@ export default async function GalleryAdmin() {
           </li>
         )}
       </ul>
+
+      {deleted && <Toast message={`“${deleted}” has been deleted.`} />}
     </>
   );
 }
