@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { deletePiece, savePiece } from "@/app/admin/actions";
+import { DeletePieceButton } from "@/components/admin/DeletePieceButton";
 import { ImageManager } from "@/components/admin/ImageManager";
 import { getAdminPrisma } from "@/lib/admin-guard";
 
@@ -113,17 +114,17 @@ export default async function EditPiece({ params }: { params: Promise<{ id: stri
         <ImageManager pieceId={piece.id} images={piece.images} />
       </div>
 
-      <form
+      {/* The action is bound here and passed down, so the client component
+          never learns the piece id and there is nothing for it to tamper with.
+          deletePiece re-checks the session regardless. */}
+      <DeletePieceButton
+        title={piece.title}
+        imageCount={piece.images.length}
         action={async () => {
           "use server";
           await deletePiece(id);
         }}
-        className="mt-16 border-t border-line pt-8"
-      >
-        <button type="submit" className="eyebrow text-ink-muted hover:text-rose">
-          Delete this piece
-        </button>
-      </form>
+      />
     </>
   );
 }
