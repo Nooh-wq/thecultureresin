@@ -73,4 +73,77 @@ export function signUpload(folder: UploadFolder) {
   };
 }
 
+/**
+ * Recovers the public_id Cloudinary needs for a delete, from the URL we store.
+ *
+ * We save secure_url and nothing else, so the id has to be parsed back out:
+ *
+ *   https://res.cloudinary.com/recy3ixe/image/upload/v1785809703/tcr/pieces/abc.png
+ *                                                               ^^^^^^^^^^^^^^^^ public_id is tcr/pieces/abc
+ *
+ * Returns null for anything that is not a Cloudinary URL, which is the normal
+ * case for the eight seeded pieces: those are local files under /public and
+ * must never be handed to a delete call.
+ *
+ * Transformation segments sit between "upload" and the version, so skipping to
+ * the v<digits> segment drops them. Our own uploads never carry
+ * transformations and always carry a version, so the fallback below only
+ * matters for a URL someone pasted in by hand.
+ */
+export function cloudinaryPublicId(url: string): string | null {
+  let parsed: URL;
+  try {
+    parsed = new URL(url);
+  } catch {
+    return null;
+  }
+  if (parsed.hostname !== "res.cloudinary.com") return null;
+
+  const parts = parsed.pathname.split("/").filter(Boolean);
+  const uploadAt = parts.indexOf("upload");
+  if (uploadAt === -1) return null;
+
+  let rest = parts.slice(uploadAt + 1);
+  const versionAt = rest.findIndex((s) => /^v\d+$/.test(s));
+  if (versionAt !== -1) rest = rest.slice(versionAt + 1);
+  if (rest.length === 0) return null;
+
+  // Only the final segment carries an extension; folders never do.
+  return rest.join("/").replace(/\.[a-z0-9]+$/i, "");
+}
+
+/**
+ * Removes images from Cloudinary after their database rows are gone.
+ *
+ * Deleting a piece used to leave its photographs on Cloudinary forever. They
+ * cost storage, and because nothing references them any more there is no way
+ * to find them again except by scrolling the Cloudinary dashboard.
+ *
+ * Deliberately never throws. This runs after the database delete has already
+ * succeeded, so the piece is off the site either way; a Cloudinary outage
+ * should not turn a completed delete into an error page. The worst case is the
+ * orphan we already had, and it is logged.
+ *
+ * Batched: delete_resources takes up to 100 ids in one call, so a piece with a
+ * dozen photographs is one request rather than a dozen.
+ */
+export async function deleteCloudinaryImages(urls: string[]): Promise<void> {
+  if (!hasCloudinary) return;
+
+  const ids = urls
+    .map(cloudinaryPublicId)
+    .filter((id): id is string => Boolean(id));
+
+  if (ids.length === 0) return;
+
+  try {
+    await cloudinary.api.delete_resources(ids);
+  } catch (e) {
+    console.error(
+      `[cloudinary] could not delete ${ids.length} image(s), now orphaned: ${ids.join(", ")}`,
+      e,
+    );
+  }
+}
+
 export { cloudinary };

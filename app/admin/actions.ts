@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
+import { deleteCloudinaryImages } from "@/lib/cloudinary";
 import { getPrisma, hasDatabase } from "@/lib/db";
 
 /**
@@ -188,10 +189,23 @@ export async function createPieceWithImages(
  */
 export async function deletePiece(id: string) {
   const prisma = await requireOwner();
-  const deleted = await prisma.piece.delete({
+
+  // Read the image URLs first. Deleting the piece cascades its PieceImage
+  // rows away, so after the delete there is nothing left to tell us what to
+  // remove from Cloudinary.
+  const piece = await prisma.piece.findUnique({
     where: { id },
-    select: { title: true },
+    select: { title: true, images: { select: { url: true } } },
   });
+  if (!piece) redirect("/admin/gallery");
+
+  await prisma.piece.delete({ where: { id } });
+
+  // Database first, Cloudinary second, and never the other way round. If this
+  // fails we are left with orphaned files, which is untidy. If it ran first
+  // and the database delete then failed, the live site would be showing a
+  // piece whose photographs had already been destroyed.
+  await deleteCloudinaryImages(piece.images.map((i) => i.url));
 
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");
@@ -200,7 +214,7 @@ export async function deletePiece(id: string) {
   // revalidated.
   revalidatePath("/");
 
-  redirect(`/admin/gallery?deleted=${encodeURIComponent(deleted.title)}`);
+  redirect(`/admin/gallery?deleted=${encodeURIComponent(piece.title)}`);
 }
 
 export async function addPieceImage(formData: FormData) {
@@ -252,9 +266,21 @@ export async function updatePieceImage(id: string, formData: FormData) {
   revalidatePath("/gallery");
 }
 
+/**
+ * Removing one photograph from a piece. Same orphan problem as deletePiece,
+ * so the same cleanup: nothing references the file afterwards, and leaving it
+ * on Cloudinary means it can only ever be found by scrolling the dashboard.
+ */
 export async function deletePieceImage(id: string) {
   const prisma = await requireOwner();
-  await prisma.pieceImage.delete({ where: { id } });
+  const image = await prisma.pieceImage.delete({
+    where: { id },
+    select: { url: true },
+  });
+
+  await deleteCloudinaryImages([image.url]);
+
   revalidatePath("/admin/gallery");
   revalidatePath("/gallery");
+  revalidatePath("/");
 }
