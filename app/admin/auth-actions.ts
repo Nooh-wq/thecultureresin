@@ -30,7 +30,7 @@ export async function signInAction(_prev: FormState, formData: FormData): Promis
 
   if (!email || !password) return { error: "Enter your email and password." };
 
-  const { ok } = await checkRateLimit(`signin:${await clientIp()}`);
+  const { ok } = await checkRateLimit("signin", await clientIp());
   if (!ok) return { error: "Too many attempts. Wait a few minutes and try again." };
 
   try {
@@ -60,7 +60,7 @@ export async function requestResetAction(
     .trim()
     .toLowerCase();
 
-  const { ok } = await checkRateLimit(`reset:${await clientIp()}`);
+  const { ok } = await checkRateLimit("reset", await clientIp());
   // Even the rate-limited response looks identical, so probing tells nothing.
   if (!ok || !email || !hasDatabase) return { done: true };
 

@@ -82,7 +82,7 @@ export async function POST(req: Request) {
   }
 
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { ok } = await checkRateLimit(`order:${ip}`);
+  const { ok } = await checkRateLimit("order", ip);
   if (!ok) {
     return NextResponse.json(
       { error: "That’s a few too many in a row. Try again in a little while." },

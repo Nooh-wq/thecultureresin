@@ -34,15 +34,20 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "That didn’t upload. Try again." }, { status: 400 });
   }
 
-  if (UPLOAD_FOLDERS[folder] === "admin") {
+  const isAdminFolder = UPLOAD_FOLDERS[folder] === "admin";
+
+  if (isAdminFolder) {
     const session = await auth();
     if (!session?.user) {
       return NextResponse.json({ error: "Not signed in." }, { status: 401 });
     }
   }
 
+  // Her bulk uploads get a far higher ceiling than an anonymous visitor. The
+  // add-a-piece modal asks for one signature per file, so a piece with ten
+  // photographs is ten requests in a few seconds and must not read as abuse.
   const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ?? "unknown";
-  const { ok } = await checkRateLimit(`upload:${ip}`);
+  const { ok } = await checkRateLimit(isAdminFolder ? "adminUpload" : "upload", ip);
   if (!ok) {
     return NextResponse.json(
       { error: "That’s a lot of uploads. Try again shortly." },
